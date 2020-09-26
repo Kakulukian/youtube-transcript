@@ -27,5 +27,6 @@
   },
   "files": [
     "dist/*"
-  ]
+  ],
+  "homepage": "https://github.com/Kakulukian/youtube-transcript"
 }

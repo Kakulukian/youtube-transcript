@@ -2,8 +2,7 @@
 
 [![npm version](https://badge.fury.io/js/youtube-transcript.svg)](https://badge.fury.io/js/youtube-transcript)
 
-
-I wanted to extract a transcript from a youtube video but there was only a python script so I created this to do it in node. 
+I wanted to extract a transcript from a youtube video but there was only a python script so I created this to do it in node.
 This package use unofficial YTB API so it can be broken over the time if no update appears.
 
 ## Installation
@@ -21,16 +20,14 @@ $ yarn add youtube-transcript
 ## Usage
 
 ```js
-import { fetchTranscript } from 'youtube-transcript';
+import YoutubeTranscript from 'youtube-transcript';
 
-fetchTranscript("videoId or URL").then(console.log)
+YoutubeTranscript.fetchTranscript('videoId or URL').then(console.log);
 ```
 
-### Methods 
+### Methods
 
 - fetchTranscript(videoId: string [,options: TranscriptConfig]): Promise<TranscriptResponse[]>;
-
-
 
 ## License
 
