@@ -49,6 +49,9 @@ export default class YoutubeTranscript {
           parse: 'json',
         });
         if (body.responseContext) {
+          if (!body.actions) {
+            throw new Error('Transcript is disabled on this video');
+          }
           const transcripts =
             body.actions[0].updateEngagementPanelAction.content
               .transcriptRenderer.body.transcriptBodyRenderer.cueGroups;
@@ -79,12 +82,12 @@ export default class YoutubeTranscript {
    * @param config
    */
   private static generateRequest(page: string, config?: TranscriptConfig) {
-    const params = page.split('"serializedShareEntity":"')[1].split('"')[0];
-    const visitorData = page.split('"VISITOR_DATA":"')[1].split('"')[0];
-    const sessionId = page.split('"sessionId":"')[1].split('"')[0];
+    const params = page.split('"serializedShareEntity":"')[1]?.split('"')[0];
+    const visitorData = page.split('"VISITOR_DATA":"')[1]?.split('"')[0];
+    const sessionId = page.split('"sessionId":"')[1]?.split('"')[0];
     const clickTrackingParams = page
-      .split('"clickTrackingParams":"')[1]
-      .split('"')[0];
+      ?.split('"clickTrackingParams":"')[1]
+      ?.split('"')[0];
     return {
       context: {
         client: {
