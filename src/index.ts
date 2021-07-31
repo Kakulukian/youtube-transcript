@@ -1,6 +1,7 @@
 import p from 'phin';
 
-const RE_YOUTUBE = /(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/gim;
+const RE_YOUTUBE =
+  /(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})|([a-zA-Z0-9_-]{11})/gim;
 
 export class YoutubeTranscriptError extends Error {
   constructor(message) {
@@ -57,9 +58,8 @@ export default class YoutubeTranscript {
               .transcriptRenderer.body.transcriptBodyRenderer.cueGroups;
 
           return transcripts.map((cue) => ({
-            text:
-              cue.transcriptCueGroupRenderer.cues[0].transcriptCueRenderer.cue
-                .simpleText,
+            text: cue.transcriptCueGroupRenderer.cues[0].transcriptCueRenderer
+              .cue.simpleText,
             duration: parseInt(
               cue.transcriptCueGroupRenderer.cues[0].transcriptCueRenderer
                 .durationMs
@@ -182,7 +182,7 @@ export default class YoutubeTranscript {
    * @param videoId video url or video id
    */
   private static retrieveVideoId(videoId: string) {
-    const matchId = RE_YOUTUBE.exec(videoId);
+    const matchId = videoId.match(RE_YOUTUBE);
     if (matchId && matchId.length) {
       return matchId[1];
     }
