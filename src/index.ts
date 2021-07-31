@@ -1,7 +1,7 @@
 import p from 'phin';
 
 const RE_YOUTUBE =
-  /(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})|([a-zA-Z0-9_-]{11})/gim;
+  /^.*(?:(?:youtu\.be\/|v\/|vi\/|u\/\w\/|embed\/)|(?:(?:watch)?\?v(?:i)?=|\&v(?:i)?=))([^#\&\?]*).*/im;
 
 export class YoutubeTranscriptError extends Error {
   constructor(message) {
@@ -182,7 +182,10 @@ export default class YoutubeTranscript {
    * @param videoId video url or video id
    */
   private static retrieveVideoId(videoId: string) {
-    const matchId = videoId.match(RE_YOUTUBE);
+    if (videoId.length === 11) {
+      return videoId;
+    }
+    const matchId = RE_YOUTUBE.exec(videoId);
     if (matchId && matchId.length) {
       return matchId[1];
     }
