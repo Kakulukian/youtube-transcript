@@ -14,7 +14,6 @@ const esConfig = {
   output: {
     file: 'dist/youtube-transcript.esm.js',
     format: 'esm',
-    exports: 'named',
   },
 };
 buildFormats.push(esConfig);

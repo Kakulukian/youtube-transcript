@@ -22,7 +22,7 @@ export interface TranscriptResponse {
 /**
  * Class to retrieve transcript if exist
  */
-export default class YoutubeTranscript {
+export class YoutubeTranscript {
   /**
    * Fetch transcript from YTB Video
    * @param videoId Video url or video identifier
@@ -185,7 +185,7 @@ export default class YoutubeTranscript {
     if (videoId.length === 11) {
       return videoId;
     }
-    const matchId = RE_YOUTUBE.exec(videoId);
+    const matchId = videoId.match(RE_YOUTUBE);
     if (matchId && matchId.length) {
       return matchId[1];
     }

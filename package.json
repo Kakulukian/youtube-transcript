@@ -28,5 +28,9 @@
   "files": [
     "dist/*"
   ],
+  "repository": "https://github.com/Kakulukian/youtube-transcript.git",
+	"publishConfig": {
+		"access": "public"
+	},
   "homepage": "https://github.com/Kakulukian/youtube-transcript"
 }

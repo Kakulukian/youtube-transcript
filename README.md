@@ -20,7 +20,7 @@ $ yarn add youtube-transcript
 ## Usage
 
 ```js
-import YoutubeTranscript from 'youtube-transcript';
+import { YoutubeTranscript } from 'youtube-transcript';
 
 YoutubeTranscript.fetchTranscript('videoId or URL').then(console.log);
 ```
