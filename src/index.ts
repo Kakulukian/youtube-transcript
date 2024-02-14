@@ -34,21 +34,25 @@ export class YoutubeTranscript {
   ): Promise<TranscriptResponse[]> {
     const identifier = this.retrieveVideoId(videoId);
     try {
-      const { body: videoPageBody } = await p(
+      const videoPageResponse = await fetch(
         `https://www.youtube.com/watch?v=${identifier}`
       );
+      const videoPageBody = await videoPageResponse.text();
       const innerTubeApiKey = videoPageBody
         .toString()
         .split('"INNERTUBE_API_KEY":"')[1]
         .split('"')[0];
 
       if (innerTubeApiKey && innerTubeApiKey.length > 0) {
-        const { body }: { body: Record<string, any> } = await p({
-          url: `https://www.youtube.com/youtubei/v1/get_transcript?key=${innerTubeApiKey}`,
+        const transcriptResponse = await fetch(
+          `https://www.youtube.com/youtubei/v1/get_transcript?key=${innerTubeApiKey}`, {
           method: 'POST',
-          data: this.generateRequest(videoPageBody.toString(), config),
-          parse: 'json',
+          body: JSON.stringify(this.generateRequest(videoPageBody.toString(), config)),
+          headers: {
+            'Content-Type': 'application/json',
+          },
         });
+        const body = await transcriptResponse.json();
         if (body.responseContext) {
           if (!body.actions) {
             throw new Error('Transcript is disabled on this video');
