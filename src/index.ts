@@ -1,7 +1,7 @@
-import p from 'phin';
-
 const RE_YOUTUBE =
   /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+const USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36,gzip(gfe)';
 
 export class YoutubeTranscriptError extends Error {
   constructor(message) {
@@ -35,23 +35,30 @@ export class YoutubeTranscript {
     const identifier = this.retrieveVideoId(videoId);
     try {
       const videoPageResponse = await fetch(
-        `https://www.youtube.com/watch?v=${identifier}`
+        `https://www.youtube.com/watch?v=${identifier}`,
+        {
+          headers: {
+            'User-Agent': USER_AGENT,
+          },
+        }
       );
       const videoPageBody = await videoPageResponse.text();
       const innerTubeApiKey = videoPageBody
-        .toString()
         .split('"INNERTUBE_API_KEY":"')[1]
         .split('"')[0];
 
       if (innerTubeApiKey && innerTubeApiKey.length > 0) {
         const transcriptResponse = await fetch(
-          `https://www.youtube.com/youtubei/v1/get_transcript?key=${innerTubeApiKey}`, {
-          method: 'POST',
-          body: JSON.stringify(this.generateRequest(videoPageBody.toString(), config)),
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+          `https://www.youtube.com/youtubei/v1/get_transcript?key=${innerTubeApiKey}`,
+          {
+            method: 'POST',
+            body: JSON.stringify(this.generateRequest(videoPageBody, config)),
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': USER_AGENT,
+            },
+          }
+        );
         const body = await transcriptResponse.json();
         if (body.responseContext) {
           if (!body.actions) {
@@ -95,8 +102,8 @@ export class YoutubeTranscript {
     return {
       context: {
         client: {
-          hl: config?.lang || 'fr',
-          gl: config?.country || 'FR',
+          hl: config?.lang || 'en',
+          gl: config?.country || 'US',
           visitorData,
           userAgent:
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36,gzip(gfe)',
