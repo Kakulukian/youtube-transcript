@@ -39,7 +39,7 @@ export const fetchTranscript = async (videoUrlOrId: string, config: YoutubeFetch
     const videoId = getVideoId(videoUrlOrId)
 
     if (!videoId) {
-      throw new YoutubeTranscriptError('Invalid Youtube video ID.')
+      throw new Error('Invalid Youtube video identifier.')
     }
 
     const url = await getTranscriptUrl(videoId, config?.lang ?? 'en')
@@ -52,6 +52,13 @@ export const fetchTranscript = async (videoUrlOrId: string, config: YoutubeFetch
   } catch (err) {
     throw new YoutubeTranscriptError(err)
   }
+}
+
+/**
+ * @deprecated Use named export `fetchTranscript`.
+ */
+export const YoutubeTranscript = {
+  fetchTranscript
 }
 
 const getTranscriptUrl = async (identifier: string, lang?: string) => {
@@ -89,7 +96,6 @@ const getTranscript = async (url: string): Promise<YoutubeTranscriptResponse[]> 
 
 /**
  * Extract caption track URL from raw HTML string.
- *
  * @param {string} html - The raw HTML string.
  * @param {string} [lang] - The language code to filter the caption tracks by. Default is undefined.
  * @returns {string|null} - The URL of the caption track, or null if not found or an error occurred.
