@@ -33,7 +33,7 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "dependencies": {
+  "peerDependencies": {
     "cheerio": "^1.0.0-rc.12"
   }
 }

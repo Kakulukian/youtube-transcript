@@ -8,7 +8,7 @@ const RE_CAPTION_TRACKS = /"captionTracks":\s*(\[.*?\])/
 const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36,gzip(gfe)'
 
-interface YoutubeTranscriptResponse {
+export interface YoutubeTranscriptResponse {
   text: string
   duration: number
   offset: number
@@ -74,8 +74,8 @@ const getTranscriptUrl = async (identifier: string, lang?: string) => {
 
 /**
  * @see https://github.com/Kakulukian/youtube-transcript/issues/19
- * @param - {string} url
- * @returns - {Promise<YoutubeTranscriptResponse[]>}
+ * @param {string} url
+ * @returns {Promise<YoutubeTranscriptResponse[]>}
  */
 const getTranscript = async (url: string): Promise<YoutubeTranscriptResponse[]> => {
   const response = await fetch(url)
