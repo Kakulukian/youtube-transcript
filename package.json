@@ -27,7 +27,8 @@
     "typescript": "^5.4.4",
     "vite": "^5.2.8",
     "vite-plugin-dts": "^3.8.1",
-    "vitest": "^1.4.0"
+    "vitest": "^1.4.0",
+    "node-html-parser": "^6.1.13"
   },
   "files": [
     "dist/*"
