@@ -1,8 +1,6 @@
 {
   "compilerOptions": {
-    "composite": true,
     "target": "esnext",
-    "rootDir": "./src",
     "module": "esnext",
     "strict": false,
     "declaration": true,
@@ -21,21 +19,16 @@
       "dom"
     ],
     "types": [
-      "node"
+      "node",
+      "vitest/globals"
+    ],
+    "typeRoots": [
+      "node_modules/@types"
     ]
   },
   "include": [
-    "src/*.ts",
-    "src/**/*.d.ts"
-  ],
-  "exclude": [
     "src/**/*.spec.ts",
-    "node_modules",
-    "dist"
-  ],
-  "references": [
-    {
-      "path": "./tsconfig.node.json"
-    }
+    "src/**/*.d.ts",
+    "vite.config.ts"
   ]
 }
