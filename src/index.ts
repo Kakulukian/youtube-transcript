@@ -9,13 +9,13 @@ const ID_LENGTH = 11;
 const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36,gzip(gfe)';
 
-export interface YoutubeTranscriptResponse {
+export interface TranscriptResponse {
   text: string;
   duration: number;
   offset: number;
 }
 
-export interface YoutubeFetchConfig {
+export interface TranscriptConfig {
   /**
    * Locale code
    * @example en, es, hk, uk
@@ -32,13 +32,13 @@ export class YoutubeTranscriptError extends Error {
 /**
  * Fetch transcript from Youtube Video
  * @param {string} videoUrlOrId - Video url or identifier
- * @param {YoutubeFetchConfig} [config]
- * @return {Promise<YoutubeTranscriptResponse[]>} - If locale available, the localized transcription or default or null.
+ * @param {TranscriptConfig} [config]
+ * @return {Promise<TranscriptResponse[]>} - If locale available, the localized transcription or default or null.
  */
 export const fetchTranscript = async (
   videoUrlOrId: string,
-  config: YoutubeFetchConfig = {},
-): Promise<YoutubeTranscriptResponse[]> => {
+  config: TranscriptConfig = {},
+): Promise<TranscriptResponse[]> => {
   try {
     const videoId = getVideoId(videoUrlOrId);
 
@@ -58,13 +58,6 @@ export const fetchTranscript = async (
   }
 };
 
-/**
- * @deprecated Use named export `fetchTranscript`.
- */
-export const YoutubeTranscript = {
-  fetchTranscript,
-};
-
 const getTranscriptUrl = async (videoId: string, lang?: string) => {
   const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
     headers: {
@@ -79,11 +72,11 @@ const getTranscriptUrl = async (videoId: string, lang?: string) => {
 /**
  * @see https://github.com/Kakulukian/youtube-transcript/issues/19
  * @param {string} url
- * @returns {Promise<YoutubeTranscriptResponse[]>}
+ * @returns {Promise<TranscriptResponse[]>}
  */
 const getTranscript = async (
   url: string,
-): Promise<YoutubeTranscriptResponse[]> => {
+): Promise<TranscriptResponse[]> => {
   const response = await fetch(url);
   const body = await response.text();
 
@@ -155,3 +148,11 @@ export const getVideoId = (videoUrlOrId: string): string | null => {
 };
 
 const toMs = (n: string): number => Math.round(parseFloat(n) * 1000);
+
+/**
+ * @deprecated Use named export `fetchTranscript`.
+ */
+export const YoutubeTranscript = {
+  fetchTranscript,
+  retrieveVideoId: getVideoId,
+};
