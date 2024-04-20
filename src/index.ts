@@ -2,6 +2,8 @@ const RE_YOUTUBE =
   /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
 const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36,gzip(gfe)';
+const RE_XML_TRANSCRIPT =
+  /<text start="([^"]*)" dur="([^"]*)">([^<]*)<\/text>/g;
 
 export class YoutubeTranscriptError extends Error {
   constructor(message) {
@@ -9,14 +11,50 @@ export class YoutubeTranscriptError extends Error {
   }
 }
 
+export class YoutubeTranscriptTooManyRequestError extends YoutubeTranscriptError {
+  constructor() {
+    super(
+      'YouTube is receiving too many requests from this IP and now requires solving a captcha to continue'
+    );
+  }
+}
+
+export class YoutubeTranscriptVideoUnavailableError extends YoutubeTranscriptError {
+  constructor(videoId: string) {
+    super(`The video is no longer available (${videoId})`);
+  }
+}
+
+export class YoutubeTranscriptDisabledError extends YoutubeTranscriptError {
+  constructor(videoId: string) {
+    super(`Transcript is disabled on this video (${videoId})`);
+  }
+}
+
+export class YoutubeTranscriptNotAvailableError extends YoutubeTranscriptError {
+  constructor(videoId: string) {
+    super(`No transcripts are available for this video (${videoId})`);
+  }
+}
+
+export class YoutubeTranscriptNotAvailableLanguageError extends YoutubeTranscriptError {
+  constructor(lang: string, availableLangs: string[], videoId: string) {
+    super(
+      `No transcripts are available in ${lang} this video (${videoId}). Available languages: ${availableLangs.join(
+        ', '
+      )}`
+    );
+  }
+}
+
 export interface TranscriptConfig {
   lang?: string;
-  country?: string;
 }
 export interface TranscriptResponse {
   text: string;
   duration: number;
   offset: number;
+  lang?: string;
 }
 
 /**
@@ -26,166 +64,92 @@ export class YoutubeTranscript {
   /**
    * Fetch transcript from YTB Video
    * @param videoId Video url or video identifier
-   * @param config Get transcript in another country and language ISO
+   * @param config Get transcript in a specific language ISO
    */
   public static async fetchTranscript(
     videoId: string,
     config?: TranscriptConfig
   ): Promise<TranscriptResponse[]> {
     const identifier = this.retrieveVideoId(videoId);
-    try {
-      const videoPageResponse = await fetch(
-        `https://www.youtube.com/watch?v=${identifier}`,
-        {
-          headers: {
-            'User-Agent': USER_AGENT,
-          },
-        }
-      );
-      const videoPageBody = await videoPageResponse.text();
-      const innerTubeApiKey = videoPageBody
-        .split('"INNERTUBE_API_KEY":"')[1]
-        .split('"')[0];
+    const videoPageResponse = await fetch(
+      `https://www.youtube.com/watch?v=${identifier}`,
+      {
+        headers: {
+          ...(config?.lang && { 'Accept-Language': config.lang }),
+          'User-Agent': USER_AGENT,
+        },
+      }
+    );
+    const videoPageBody = await videoPageResponse.text();
 
-      if (innerTubeApiKey && innerTubeApiKey.length > 0) {
-        const transcriptResponse = await fetch(
-          `https://www.youtube.com/youtubei/v1/get_transcript?key=${innerTubeApiKey}`,
-          {
-            method: 'POST',
-            body: JSON.stringify(this.generateRequest(videoPageBody, config)),
-            headers: {
-              'Content-Type': 'application/json',
-              'User-Agent': USER_AGENT,
-            },
-          }
+    const splittedHTML = videoPageBody.split('"captions":');
+
+    if (splittedHTML.length <= 1) {
+      if (videoPageBody.includes('class="g-recaptcha"')) {
+        throw new YoutubeTranscriptTooManyRequestError();
+      }
+      if (!videoPageBody.includes('"playabilityStatus":')) {
+        throw new YoutubeTranscriptVideoUnavailableError(videoId);
+      }
+      throw new YoutubeTranscriptDisabledError(videoId);
+    }
+
+    const captions = (() => {
+      try {
+        return JSON.parse(
+          splittedHTML[1].split(',"videoDetails')[0].replace('\n', '')
         );
-        const body = await transcriptResponse.json();
-        if (body.responseContext) {
-          if (!body.actions) {
-            throw new Error('Transcript is disabled on this video');
-          }
-          const transcripts =
-            body.actions[0].updateEngagementPanelAction.content
-              .transcriptRenderer.body.transcriptBodyRenderer.cueGroups;
-
-          return transcripts.map((cue) => ({
-            text: cue.transcriptCueGroupRenderer.cues[0].transcriptCueRenderer
-              .cue.simpleText,
-            duration: parseInt(
-              cue.transcriptCueGroupRenderer.cues[0].transcriptCueRenderer
-                .durationMs
-            ),
-            offset: parseInt(
-              cue.transcriptCueGroupRenderer.cues[0].transcriptCueRenderer
-                .startOffsetMs
-            ),
-          }));
-        }
+      } catch (e) {
+        return undefined;
       }
-    } catch (e) {
-      throw new YoutubeTranscriptError(e);
-    }
-  }
+    })()?.['playerCaptionsTracklistRenderer'];
 
-  /**
-   * Generate tracking params for YTB API
-   * @param page
-   * @param config
-   */
-  private static generateRequest(page: string, config?: TranscriptConfig) {
-    const params = page.split('"serializedShareEntity":"')[1]?.split('"')[0];
-    const visitorData = page.split('"VISITOR_DATA":"')[1]?.split('"')[0];
-    const sessionId = page.split('"sessionId":"')[1]?.split('"')[0];
-    const clickTrackingParams = page
-      ?.split('"clickTrackingParams":"')[1]
-      ?.split('"')[0];
-    return {
-      context: {
-        client: {
-          hl: config?.lang || 'en',
-          gl: config?.country || 'US',
-          visitorData,
-          userAgent:
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36,gzip(gfe)',
-          clientName: 'WEB',
-          clientVersion: '2.20200925.01.00',
-          osName: 'Macintosh',
-          osVersion: '10_15_4',
-          browserName: 'Chrome',
-          browserVersion: '85.0f.4183.83',
-          screenWidthPoints: 1440,
-          screenHeightPoints: 770,
-          screenPixelDensity: 2,
-          utcOffsetMinutes: 120,
-          userInterfaceTheme: 'USER_INTERFACE_THEME_LIGHT',
-          connectionType: 'CONN_CELLULAR_3G',
-        },
-        request: {
-          sessionId,
-          internalExperimentFlags: [],
-          consistencyTokenJars: [],
-        },
-        user: {},
-        clientScreenNonce: this.generateNonce(),
-        clickTracking: {
-          clickTrackingParams,
-        },
+    if (!captions) {
+      throw new YoutubeTranscriptDisabledError(videoId);
+    }
+
+    if (!('captionTracks' in captions)) {
+      throw new YoutubeTranscriptNotAvailableError(videoId);
+    }
+
+    if (
+      config?.lang &&
+      !captions.captionTracks.some(
+        (track) => track.languageCode === config?.lang
+      )
+    ) {
+      throw new YoutubeTranscriptNotAvailableLanguageError(
+        config?.lang,
+        captions.captionTracks.map((track) => track.languageCode),
+        videoId
+      );
+    }
+
+    const transcriptURL = (
+      config?.lang
+        ? captions.captionTracks.find(
+            (track) => track.languageCode === config?.lang
+          )
+        : captions.captionTracks[0]
+    ).baseUrl;
+
+    const transcriptResponse = await fetch(transcriptURL, {
+      headers: {
+        ...(config?.lang && { 'Accept-Language': config.lang }),
+        'User-Agent': USER_AGENT,
       },
-      params,
-    };
-  }
-
-  /**
-   *  'base.js' function
-   */
-  private static generateNonce() {
-    const rnd = Math.random().toString();
-    const alphabet =
-      'ABCDEFGHIJKLMOPQRSTUVWXYZabcdefghjijklmnopqrstuvwxyz0123456789';
-    const jda = [
-      alphabet + '+/=',
-      alphabet + '+/',
-      alphabet + '-_=',
-      alphabet + '-_.',
-      alphabet + '-_',
-    ];
-    const b = jda[3];
-    const a = [];
-    for (let i = 0; i < rnd.length - 1; i++) {
-      a.push(rnd[i].charCodeAt(i));
+    });
+    if (!transcriptResponse.ok) {
+      throw new YoutubeTranscriptNotAvailableError(videoId);
     }
-    let c = '';
-    let d = 0;
-    let m, n, q, r, f, g;
-    while (d < a.length) {
-      f = a[d];
-      g = d + 1 < a.length;
-
-      if (g) {
-        m = a[d + 1];
-      } else {
-        m = 0;
-      }
-      n = d + 2 < a.length;
-      if (n) {
-        q = a[d + 2];
-      } else {
-        q = 0;
-      }
-      r = f >> 2;
-      f = ((f & 3) << 4) | (m >> 4);
-      m = ((m & 15) << 2) | (q >> 6);
-      q &= 63;
-      if (!n) {
-        q = 64;
-        if (!q) {
-          m = 64;
-        }
-      }
-      c += b[r] + b[f] + b[m] + b[q];
-      d += 3;
-    }
-    return c;
+    const transcriptBody = await transcriptResponse.text();
+    const results = [...transcriptBody.matchAll(RE_XML_TRANSCRIPT)];
+    return results.map((result) => ({
+      text: result[3],
+      duration: parseFloat(result[2]),
+      offset: parseFloat(result[1]),
+      lang: config?.lang ? config.lang : captions.captionTracks[0].languageCode,
+    }));
   }
 
   /**
