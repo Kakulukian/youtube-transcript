@@ -148,7 +148,7 @@ export class YoutubeTranscript {
       text: result[3],
       duration: parseFloat(result[2]),
       offset: parseFloat(result[1]),
-      lang: config?.lang ? config.lang : captions.captionTracks[0].languageCode,
+      lang: config?.lang ?? captions.captionTracks[0].languageCode,
     }));
   }
 
