@@ -19,11 +19,36 @@ $ yarn add youtube-transcript
 
 ## Usage
 
+### Default Usage:
+
 ```js
 import { YoutubeTranscript } from 'youtube-transcript';
 
 YoutubeTranscript.fetchTranscript('videoId or URL').then(console.log);
 ```
+
+### Specify a language:
+
+```js
+import { YoutubeTranscript } from 'youtube-transcript';
+
+YoutubeTranscript.fetchTranscript('videoId or URL', { lang: 'fr' }).then(
+  console.log
+);
+```
+
+### Provide a proxy*:
+
+```js
+import { YoutubeTranscript } from 'youtube-transcript';
+
+YoutubeTranscript.fetchTranscript('videoId or URL', {
+  proxy: 'http://localhost:8080',
+}).then(console.log);
+```
+
+\* The proxy option uses Axios [Request Config](https://axios-http.com/docs/req_config) to set the proxy and supports http, https in the following format:
+`protocol://username:password@host:port`
 
 ### Methods
 
