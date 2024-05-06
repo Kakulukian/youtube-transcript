@@ -1,6 +1,7 @@
 {
   "name": "youtube-transcript",
   "version": "1.3.0",
+  "type": "module",
   "description": "Fetch transcript from a youtube video",
   "main": "dist/youtube-transcript.common.js",
   "browser": "dist/youtube-transcript.esm.js",
