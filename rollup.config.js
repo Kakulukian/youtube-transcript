@@ -12,7 +12,7 @@ const buildFormats = [];
 const esConfig = {
   ...baseConfig,
   output: {
-    file: 'dist/youtube-transcript.esm.js',
+    file: 'dist/youtube-transcript.js',
     format: 'esm',
   },
 };
@@ -23,7 +23,7 @@ const umdConfig = {
   ...baseConfig,
   output: {
     compact: true,
-    file: 'dist/youtube-transcript.common.js',
+    file: 'dist/youtube-transcript.cjs',
     format: 'cjs',
     name: 'YoutubeTranscript',
     exports: 'named',

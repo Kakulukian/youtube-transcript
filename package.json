@@ -8,7 +8,7 @@
   "module": "dist/youtube-transcript.esm.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "rollup -c --bundleConfigAsCjs"
+    "build": "rollup -c"
   },
   "author": "Kakulukian",
   "keywords": [

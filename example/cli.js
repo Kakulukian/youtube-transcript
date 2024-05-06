@@ -1,4 +1,5 @@
-const { YoutubeTranscript } = require('youtube-transcript');
-YoutubeTranscript.fetchTranscript(process.argv[2])
-  .then(console.log)
-  .catch(console.error);
+import { YoutubeTranscript } from 'youtube-transcript';
+
+(async () => {
+    console.log(await YoutubeTranscript.fetchTranscript(process.argv[2]));
+})();
