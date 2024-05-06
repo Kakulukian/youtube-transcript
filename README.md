@@ -19,7 +19,7 @@ $ yarn add youtube-transcript
 
 ## Usage
 
-Default Usage:
+### Default Usage:
 
 ```js
 import { YoutubeTranscript } from 'youtube-transcript';
@@ -27,7 +27,7 @@ import { YoutubeTranscript } from 'youtube-transcript';
 YoutubeTranscript.fetchTranscript('videoId or URL').then(console.log);
 ```
 
-Specify a language:
+### Specify a language:
 
 ```js
 import { YoutubeTranscript } from 'youtube-transcript';
@@ -37,7 +37,7 @@ YoutubeTranscript.fetchTranscript('videoId or URL', { lang: 'fr' }).then(
 );
 ```
 
-Provide a proxy:
+### Provide a proxy:
 
 ```js
 import { YoutubeTranscript } from 'youtube-transcript';
