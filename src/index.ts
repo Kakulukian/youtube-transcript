@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 const RE_YOUTUBE =
   /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
 const USER_AGENT =
@@ -49,6 +51,7 @@ export class YoutubeTranscriptNotAvailableLanguageError extends YoutubeTranscrip
 
 export interface TranscriptConfig {
   lang?: string;
+  proxy?: string;
 }
 export interface TranscriptResponse {
   text: string;
@@ -64,23 +67,31 @@ export class YoutubeTranscript {
   /**
    * Fetch transcript from YTB Video
    * @param videoId Video url or video identifier
-   * @param config Get transcript in a specific language ISO
+   * @param config Specify a specific language ISO code or a proxy URL
    */
   public static async fetchTranscript(
     videoId: string,
     config?: TranscriptConfig
   ): Promise<TranscriptResponse[]> {
+    const axiosConfig = {
+      headers: {
+        ...(config?.lang && { 'Accept-Language': config.lang }),
+        'User-Agent': USER_AGENT,
+      },
+      // Add proxy configuration if provided
+      ...(config?.proxy && parseProxyURL(config.proxy)),
+    };
+
     const identifier = this.retrieveVideoId(videoId);
-    const videoPageResponse = await fetch(
-      `https://www.youtube.com/watch?v=${identifier}`,
-      {
-        headers: {
-          ...(config?.lang && { 'Accept-Language': config.lang }),
-          'User-Agent': USER_AGENT,
-        },
-      }
-    );
-    const videoPageBody = await videoPageResponse.text();
+    const videoPageResponse = await axios
+      .get(`https://www.youtube.com/watch?v=${identifier}`, axiosConfig)
+      .catch(() => {
+        throw new YoutubeTranscriptError(
+          'An error occurred while fetching the video page.'
+        );
+      });
+
+    const videoPageBody = videoPageResponse.data;
 
     const splittedHTML = videoPageBody.split('"captions":');
 
@@ -133,16 +144,14 @@ export class YoutubeTranscript {
         : captions.captionTracks[0]
     ).baseUrl;
 
-    const transcriptResponse = await fetch(transcriptURL, {
-      headers: {
-        ...(config?.lang && { 'Accept-Language': config.lang }),
-        'User-Agent': USER_AGENT,
-      },
-    });
-    if (!transcriptResponse.ok) {
-      throw new YoutubeTranscriptNotAvailableError(videoId);
-    }
-    const transcriptBody = await transcriptResponse.text();
+    const transcriptResponse = await axios
+      .get(transcriptURL, axiosConfig)
+      .catch(() => {
+        throw new YoutubeTranscriptNotAvailableError(videoId);
+      });
+
+    const transcriptBody = transcriptResponse.data;
+
     const results = [...transcriptBody.matchAll(RE_XML_TRANSCRIPT)];
     return results.map((result) => ({
       text: result[3],
@@ -168,4 +177,50 @@ export class YoutubeTranscript {
       'Impossible to retrieve Youtube video ID.'
     );
   }
+}
+
+type Auth = {
+  username: string;
+  password: string;
+};
+
+type Proxy = {
+  protocol: string;
+  host: string;
+  port: number;
+  auth?: Auth;
+};
+
+function parseProxyURL(url: string): Proxy | undefined {
+  // Regular expression to extract parts of the proxy URL
+  const regex = /^(https?):\/\/(([^:@]*):?([^@]*)@)?([^:@]*)(?::(\d+))?$/;
+
+  const match = url.match(regex);
+  if (!match) {
+    return undefined;
+  }
+
+  // @ts-ignore
+  const [_, protocol, __, username, password, host, portStr] = match;
+
+  // Create the proxy object
+  const proxy: Proxy = {
+    protocol: protocol,
+    host: host,
+    port: getDefaultPort(protocol, portStr),
+  };
+
+  // If username and password are present, add the auth object
+  if (username && password) {
+    proxy.auth = { username, password };
+  }
+
+  return proxy;
+}
+
+function getDefaultPort(protocol: string, portStr?: string): number {
+  if (portStr) {
+    return parseInt(portStr, 10);
+  }
+  return protocol === 'https' ? 443 : 80;
 }

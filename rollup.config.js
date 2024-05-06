@@ -3,7 +3,7 @@ import typescript from 'rollup-plugin-typescript2';
 const baseConfig = {
   input: 'src/index.ts',
   plugins: [typescript()],
-  external: ['phin'],
+  external: ['axios'],
 };
 
 const buildFormats = [];
