@@ -1,7 +1,7 @@
 {
-  "name": "youtube-transcript",
+  "name": "youtube-transcript-shorts",
   "version": "1.2.1",
-  "description": "Fetch transcript from a youtube video",
+  "description": "Fetch transcript from a youtube video or short",
   "main": "dist/youtube-transcript.common.js",
   "browser": "dist/youtube-transcript.esm.js",
   "module": "dist/youtube-transcript.esm.js",
@@ -9,7 +9,7 @@
   "scripts": {
     "build": "rollup -c"
   },
-  "author": "Kakulukian",
+  "author": "taylorchance",
   "keywords": [
     "youtube",
     "transcript"
@@ -25,11 +25,11 @@
   "files": [
     "dist/*"
   ],
-  "repository": "https://github.com/Kakulukian/youtube-transcript.git",
+  "repository": "https://github.com/taylorchance/youtube-transcript.git",
   "publishConfig": {
     "access": "public"
   },
-  "homepage": "https://github.com/Kakulukian/youtube-transcript",
+  "homepage": "https://github.com/taylorchance/youtube-transcript",
   "engines": {
     "node": ">=18.0.0"
   }
