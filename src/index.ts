@@ -40,7 +40,7 @@ export class YoutubeTranscriptNotAvailableError extends YoutubeTranscriptError {
 export class YoutubeTranscriptNotAvailableLanguageError extends YoutubeTranscriptError {
   constructor(lang: string, availableLangs: string[], videoId: string) {
     super(
-      `No transcripts are available in ${lang} this video (${videoId}). Available languages: ${availableLangs.join(
+      `No transcripts are available in ${lang} for this video (${videoId}). Available languages: ${availableLangs.join(
         ', '
       )}`
     );
