@@ -38,9 +38,9 @@ export class YoutubeTranscriptNotAvailableError extends YoutubeTranscriptError {
 }
 
 export class YoutubeTranscriptNotAvailableLanguageError extends YoutubeTranscriptError {
-  constructor(lang: string, availableLangs: string[], videoId: string) {
+  constructor(langs: string[], availableLangs: string[], videoId: string) {
     super(
-      `No transcripts are available in ${lang} for this video (${videoId}). Available languages: ${availableLangs.join(
+      `No transcripts are available in ${langs.join(', ')} for this video (${videoId}). Available languages: ${availableLangs.join(
         ', '
       )}`
     );
@@ -49,6 +49,7 @@ export class YoutubeTranscriptNotAvailableLanguageError extends YoutubeTranscrip
 
 export interface TranscriptConfig {
   lang?: string;
+  langs?: string[];
 }
 export interface TranscriptResponse {
   text: string;
@@ -64,18 +65,23 @@ export class YoutubeTranscript {
   /**
    * Fetch transcript from YTB Video
    * @param videoId Video url or video identifier
-   * @param config Get transcript in a specific language ISO
+   * @param config Get transcript in a specific language ISOs, ordered by preference
    */
   public static async fetchTranscript(
     videoId: string,
     config?: TranscriptConfig
   ): Promise<TranscriptResponse[]> {
     const identifier = this.retrieveVideoId(videoId);
+    
+    // Merge config.lang and config.langs
+    const configLangs = [...(config?.lang ? [config.lang] : []), ...(config?.langs ?? [])];
+    const preferredLang = configLangs?.[0];
+
     const videoPageResponse = await fetch(
       `https://www.youtube.com/watch?v=${identifier}`,
       {
         headers: {
-          ...(config?.lang && { 'Accept-Language': config.lang }),
+          ...(preferredLang && { 'Accept-Language': preferredLang }),
           'User-Agent': USER_AGENT,
         },
       }
@@ -112,30 +118,33 @@ export class YoutubeTranscript {
       throw new YoutubeTranscriptNotAvailableError(videoId);
     }
 
-    if (
-      config?.lang &&
-      !captions.captionTracks.some(
-        (track) => track.languageCode === config?.lang
-      )
-    ) {
+    
+    // Check for available languages based on config
+    let availableLanguages: string[] = configLangs.filter(
+        (lang) => captions.captionTracks.some((track) => track.languageCode === lang)
+      );
+
+    if (configLangs.length && !availableLanguages.length) {
       throw new YoutubeTranscriptNotAvailableLanguageError(
-        config?.lang,
+        configLangs,
         captions.captionTracks.map((track) => track.languageCode),
         videoId
       );
     }
 
+    const transcriptLanguage = availableLanguages[0];
+
     const transcriptURL = (
-      config?.lang
+      transcriptLanguage
         ? captions.captionTracks.find(
-            (track) => track.languageCode === config?.lang
-          )
+          (track) => track.languageCode === transcriptLanguage
+        )
         : captions.captionTracks[0]
     ).baseUrl;
 
     const transcriptResponse = await fetch(transcriptURL, {
       headers: {
-        ...(config?.lang && { 'Accept-Language': config.lang }),
+        ...(transcriptLanguage && { 'Accept-Language': transcriptLanguage }),
         'User-Agent': USER_AGENT,
       },
     });
@@ -148,7 +157,7 @@ export class YoutubeTranscript {
       text: result[3],
       duration: parseFloat(result[2]),
       offset: parseFloat(result[1]),
-      lang: config?.lang ?? captions.captionTracks[0].languageCode,
+      lang: transcriptLanguage,
     }));
   }
 
