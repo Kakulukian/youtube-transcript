@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 
 const RE_YOUTUBE =
   /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
@@ -73,13 +73,12 @@ export class YoutubeTranscript {
     videoId: string,
     config?: TranscriptConfig
   ): Promise<TranscriptResponse[]> {
-    const axiosConfig = {
+    const axiosConfig: AxiosRequestConfig = {
       headers: {
         ...(config?.lang && { 'Accept-Language': config.lang }),
         'User-Agent': USER_AGENT,
       },
-      // Add proxy configuration if provided
-      ...(config?.proxy && parseProxyURL(config.proxy)),
+      ...(config?.proxy && { proxy: parseProxyURL(config.proxy) }),
     };
 
     const identifier = this.retrieveVideoId(videoId);
@@ -200,10 +199,7 @@ function parseProxyURL(url: string): Proxy | undefined {
     return undefined;
   }
 
-  // @ts-ignore
   const [_, protocol, __, username, password, host, portStr] = match;
-
-  // Create the proxy object
   const proxy: Proxy = {
     protocol: protocol,
     host: host,
