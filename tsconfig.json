@@ -17,6 +17,6 @@
     "lib": ["esnext", "dom"],
     "typeRoots": ["node_modules/@types"]
   },
-  "include": ["src/*.ts"],
+  "include": ["src/*.ts", "tests/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
