@@ -71,38 +71,47 @@ export class YoutubeTranscript {
     config?: TranscriptConfig
   ): Promise<TranscriptResponse[]> {
     const identifier = this.retrieveVideoId(videoId);
-    const videoPageResponse = await fetch(
-      `https://www.youtube.com/watch?v=${identifier}`,
-      {
-        headers: {
-          ...(config?.lang && { 'Accept-Language': config.lang }),
-          'User-Agent': USER_AGENT,
+    const options = {
+      method: 'POST',
+      headers: {
+        ...(config?.lang && { 'Accept-Language': config.lang }),
+        'Content-Type': 'application/json',
+        Origin: 'https://www.youtube.com',
+        Referer: `https://www.youtube.com/watch?v=${identifier}`
+      },
+      body: JSON.stringify({
+        context: {
+          client: {
+            clientName: 'WEB',
+            clientVersion: '2.20240304.00.00',
+            hl: 'en',
+            gl: 'US',
+            userAgent: USER_AGENT
+          }
         },
-      }
-    );
-    const videoPageBody = await videoPageResponse.text();
-
-    const splittedHTML = videoPageBody.split('"captions":');
-
-    if (splittedHTML.length <= 1) {
-      if (videoPageBody.includes('class="g-recaptcha"')) {
-        throw new YoutubeTranscriptTooManyRequestError();
-      }
-      if (!videoPageBody.includes('"playabilityStatus":')) {
-        throw new YoutubeTranscriptVideoUnavailableError(videoId);
-      }
-      throw new YoutubeTranscriptDisabledError(videoId);
+        videoId: identifier,
+        playbackContext: {
+          contentPlaybackContext: {
+            currentUrl: `/watch?v=${identifier}`,
+            vis: 0,
+            splay: false,
+            autoCaptionsDefaultOn: false,
+            autonavState: 'STATE_NONE',
+            html5Preference: 'HTML5_PREF_WANTS',
+            lactThreshold: -1
+          }
+        },
+        racyCheckOk: false,
+        contentCheckOk: false
+      }),
     }
+    
+    const InnerTubeApiResponse = await fetch(
+      'https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
+      options
+    );
 
-    const captions = (() => {
-      try {
-        return JSON.parse(
-          splittedHTML[1].split(',"videoDetails')[0].replace('\n', '')
-        );
-      } catch (e) {
-        return undefined;
-      }
-    })()?.['playerCaptionsTracklistRenderer'];
+    const { captions: { playerCaptionsTracklistRenderer: captions } } = await InnerTubeApiResponse.json();
 
     if (!captions) {
       throw new YoutubeTranscriptDisabledError(videoId);
