@@ -1,13 +1,13 @@
 const RE_YOUTUBE =
   /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
 const USER_AGENT =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36,gzip(gfe)';
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const RE_XML_TRANSCRIPT =
   /<text start="([^"]*)" dur="([^"]*)">([^<]*)<\/text>/g;
 
 const INNERTUBE_API_URL =
   'https://www.youtube.com/youtubei/v1/player?prettyPrint=false';
-const INNERTUBE_CLIENT_VERSION = '20.10.38';
+const INNERTUBE_CLIENT_VERSION = '19.29.37';
 const INNERTUBE_CONTEXT = {
   client: {
     clientName: 'ANDROID',
@@ -74,6 +74,44 @@ export interface TranscriptResponse {
  */
 export class YoutubeTranscript {
   /**
+   * Retry helper with exponential backoff
+   */
+  private static async retryWithBackoff<T>(
+    operation: () => Promise<T>,
+    maxRetries: number = 3,
+    baseDelay: number = 1000,
+  ): Promise<T> {
+    let lastError: Error;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error as Error;
+
+        // Don't retry on certain permanent errors
+        if (error instanceof YoutubeTranscriptVideoUnavailableError ||
+            error instanceof YoutubeTranscriptDisabledError ||
+            error instanceof YoutubeTranscriptNotAvailableError ||
+            error instanceof YoutubeTranscriptNotAvailableLanguageError) {
+          throw error;
+        }
+
+        // If this is the last attempt, throw the error
+        if (attempt === maxRetries) {
+          throw error;
+        }
+
+        // Calculate delay with exponential backoff
+        const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+
+    throw lastError!;
+  }
+
+  /**
    * Fetch transcript from YTB Video
    * @param videoId Video url or video identifier
    * @param config Get transcript in a specific language ISO
@@ -82,16 +120,18 @@ export class YoutubeTranscript {
     videoId: string,
     config?: TranscriptConfig,
   ): Promise<TranscriptResponse[]> {
-    const identifier = this.retrieveVideoId(videoId);
+    return this.retryWithBackoff(async () => {
+      const identifier = this.retrieveVideoId(videoId);
 
-    // Try InnerTube API first
-    const innerTubeResult = await this.fetchViaInnerTube(identifier, config);
-    if (innerTubeResult) {
-      return innerTubeResult;
-    }
+      // Try InnerTube API first
+      const innerTubeResult = await this.fetchViaInnerTube(identifier, config);
+      if (innerTubeResult) {
+        return innerTubeResult;
+      }
 
-    // Fall back to HTML scraping
-    return this.fetchViaWebPage(identifier, videoId, config);
+      // Fall back to HTML scraping
+      return this.fetchViaWebPage(identifier, videoId, config);
+    });
   }
 
   /**
@@ -108,6 +148,11 @@ export class YoutubeTranscript {
         headers: {
           'Content-Type': 'application/json',
           'User-Agent': INNERTUBE_USER_AGENT,
+          'Accept': '*/*',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Accept-Language': config?.lang || 'en-US,en;q=0.9',
+          'Origin': 'https://www.youtube.com',
+          'Referer': 'https://www.youtube.com/',
         },
         body: JSON.stringify({
           context: INNERTUBE_CONTEXT,
@@ -144,8 +189,20 @@ export class YoutubeTranscript {
       `https://www.youtube.com/watch?v=${identifier}`,
       {
         headers: {
-          ...(config?.lang && { 'Accept-Language': config.lang }),
           'User-Agent': USER_AGENT,
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Accept-Language': config?.lang || 'en-US,en;q=0.9',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+          'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+          'Sec-Ch-Ua-Mobile': '?0',
+          'Sec-Ch-Ua-Platform': '"Windows"',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Upgrade-Insecure-Requests': '1',
         },
       },
     );
@@ -240,8 +297,11 @@ export class YoutubeTranscript {
     const fetchFn = config?.fetch ?? fetch;
     const transcriptResponse = await fetchFn(transcriptURL, {
       headers: {
-        ...(config?.lang && { 'Accept-Language': config.lang }),
         'User-Agent': USER_AGENT,
+        'Accept': 'application/xml,application/xhtml+xml,text/xml;q=0.9,text/plain;q=0.8,*/*;q=0.1',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept-Language': config?.lang || 'en-US,en;q=0.9',
+        'Referer': 'https://www.youtube.com/',
       },
     });
     if (!transcriptResponse.ok) {
